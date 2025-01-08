@@ -1,0 +1,15 @@
+services:
+  converter:
+    build: .
+    image: cr.coscene.cn/codemo/h264-encoder:latest
+    volumes:
+      - ./files:${INPUT_PATHS:-/cos/files}:ro
+      - ./outputs:${OUTPUT_DIR:-/cos/outputs}
+    environment:
+      - TOPIC=${TOPIC:-/video/h264}
+      - INPUT_PATHS=${INPUT_PATHS:-/cos/files}
+      - OUTPUT_DIR=${OUTPUT_DIR:-/cos/outputs}
+    command: >
+      python3 mp4_to_mcap.py
+    stdin_open: true
+    tty: true
