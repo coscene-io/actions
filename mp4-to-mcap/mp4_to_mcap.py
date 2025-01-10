@@ -83,7 +83,9 @@ def load_mp4_frames(
             yield frame_time_ns, compressed_frame
 
 
-def process_mp4_h264_stream(input_mp4: Path, output_mcap: Path, topic: str):
+def process_mp4_h264_stream(
+    input_mp4: Path, output_mcap: Path, topic: str, start_time_ns: Optional[int] = None
+):
     """Process MP4 file and write to MCAP file with progress bar.
 
     Args:
@@ -119,7 +121,9 @@ def process_mp4_h264_stream(input_mp4: Path, output_mcap: Path, topic: str):
         writer.start()
 
         # Write frames with progress bar
-        for timestamp, message in load_mp4_frames(input_mp4):
+        for timestamp, message in load_mp4_frames(
+            input_mp4, global_start_time_ns=start_time_ns
+        ):
             protobuf_writer.write_message(
                 topic=topic,
                 message=message,
@@ -136,7 +140,12 @@ def process_mp4_h264_stream(input_mp4: Path, output_mcap: Path, topic: str):
     print(f"Output MCAP file: {output_mcap}")
 
 
-def process_input_files(input_paths: List[Path], output_dir: Path, topic: str) -> None:
+def process_input_files(
+    input_paths: List[Path],
+    output_dir: Path,
+    topic: str,
+    global_start_time_ns: Optional[int] = None,
+) -> None:
     """Process all MP4 files from input paths and convert them to MCAP files.
 
     Args:
@@ -161,7 +170,10 @@ def process_input_files(input_paths: List[Path], output_dir: Path, topic: str) -
         output_file = output_dir / f"{mp4_file.stem}.mcap"
         print(f"\nProcessing {mp4_file.name} -> {output_file.name}")
         process_mp4_h264_stream(
-            input_mp4=mp4_file, output_mcap=output_file, topic=topic
+            input_mp4=mp4_file,
+            output_mcap=output_file,
+            topic=topic,
+            start_time_ns=global_start_time_ns,
         )
 
 
@@ -175,7 +187,7 @@ def main():
     )
     parser.add_argument(
         "--output-dir",
-        type=lambda x: Path(x).expanduser() if x else None,
+        type=lambda x: Path(x).expanduser(),
         help="Output directory for MCAP files (required)",
     )
     parser.add_argument(
@@ -183,6 +195,11 @@ def main():
         type=str,
         default=os.environ.get("TOPIC", "/video/h264"),
         help="Topic for video streams",
+    )
+    parser.add_argument(
+        "--start-time-ns",
+        type=int,
+        help="Global start time in nanoseconds to align the video with",
     )
     args = parser.parse_args()
 
@@ -192,8 +209,16 @@ def main():
         ]
     if not args.output_dir and os.environ.get("OUTPUT_DIR"):
         args.output_dir = Path(os.environ.get("OUTPUT_DIR")).expanduser()
+    if not args.start_time_ns and os.environ.get("START_TIME_NS"):
+        args.start_time_ns = int(os.environ.get("START_TIME_NS"))
 
-    process_input_files(args.input_paths, args.output_dir, args.topic)
+    print(f"Input paths: {args.input_paths}")
+    print(f"Output directory: {args.output_dir}")
+    print(f"Topic: {args.topic}")
+
+    process_input_files(
+        args.input_paths, args.output_dir, args.topic, args.start_time_ns
+    )
 
 
 if __name__ == "__main__":

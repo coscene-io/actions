@@ -13,11 +13,11 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
 
 WORKDIR /action
-COPY . /action
-VOLUME ["/cos/files", "/cos/outputs"]
 
-ENV TOPIC="/video/h264" \
+VOLUME ["/cos/files", "/cos/outputs"]
+ENV TOPIC_PREFIX="/video/h264" \
     INPUT_PATHS="/cos/files" \
     OUTPUT_DIR="/cos/outputs"
 
+COPY . /action
 CMD ["python3", "mp4_to_mcap.py"]
