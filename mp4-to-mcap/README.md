@@ -105,6 +105,16 @@ docker compose run -e INPUT_PATHS=/data/videos -e OUTPUT_DIR=/data/output conver
 - Configures environment variables
 - Enables interactive mode for debugging
 
+## CI/CD Pipeline
+![img.png](images/secrets.png)
+```shell
+
+# Create a new secret
+gh secret set COSCENE_DOCKER_USER --env coscene.cn:codemo --body "xxxxxxxxxxxxxxxxxxxxxxxxxx@coscene.auth"
+gh secret set COSCENE_DOCKER_PASS --env coscene.cn:codemo --body "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
+```
+
+
 ## Notes
 
 - The converter maintains frame timing from the original MP4

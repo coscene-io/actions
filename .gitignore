@@ -267,3 +267,4 @@ pyrightconfig.json
 
 files/
 outputs/
+.secrets
