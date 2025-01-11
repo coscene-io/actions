@@ -1,73 +1,125 @@
 # MP4 to MCAP Converter
 
-This project provides a Dockerized service to convert MP4 files into MCAP format. Follow the steps below to set up and run the converter.
+A tool to convert MP4 video files into MCAP format with H264 encoding. This tool is particularly useful for robotics applications that need to store video data in MCAP format.
 
-## Prerequisites
-- Docker installed on your local machine.
-- Access to the coScene Docker registry at cr.coscene.cn.
+## Project Structure
+
+```
+.
+├── Dockerfile           # Container definition
+├── docker-compose.yml  # Container orchestration
+├── environment.yml     # Conda environment definition (optional)
+├── requirements.txt    # Python dependencies
+├── mp4_to_mcap.py     # Main conversion script
+└── writers.py         # MCAP writer utilities
+```
+
+## Key Components
+
+### mp4_to_mcap.py
+The main script that handles MP4 to MCAP conversion. Key features:
+- Supports batch processing of multiple MP4 files
+- Progress bar showing conversion status
+- Configurable topic names and timestamps
+- Handles both file and directory inputs
+
+### writers.py
+Utility class for writing Protobuf messages to MCAP format:
+- Handles schema registration
+- Manages channel IDs
+- Provides clean interface for message writing
+
+### requirements.txt
+Python dependencies:
+```
+av==12.3.0                        # For video processing
+foxglove-schemas-protobuf==0.2.2  # Protobuf schemas
+mcap==1.1.0                       # MCAP file format
+mcap-protobuf-support==0.5.2      # Protobuf support for MCAP
+numpy==1.24.4                     # Numerical operations
+opencv-python==4.10.0.84          # Video processing
+tqdm==4.67.1                      # Progress bars
+```
 
 ## Setup Instructions
 
-### 1. Log in to coScene Docker Registry and Push the Image
+### Local Development
 
-Ensure you have the necessary credentials to [access the coScene Docker registry](https://docs.coscene.cn/docs/use-case/automated-data-processing/#%E7%99%BB%E5%BD%95%E9%95%9C%E5%83%8F%E4%BB%93%E5%BA%93).
-
-
-```
-# Log in to the coScene Docker registry
-docker login cr.coscene.cn
-# When prompted, enter your username and password
+1. Install Python dependencies:
+```bash
+pip install -r requirements.txt
 ```
 
-
-### 2. Clone the Repository and Build the Docker Image
-```
-# Clone the repository
-git clone https://github.com/coscene-io/mp4-to-mcap.git
-cd mp4-to-mcap
-
-# Build and push the Docker image
-docker buildx build --platform linux/amd64 -t cr.coscene.cn/{your_project_name}/h264-encoder:latest .
+2. Run the converter:
+```bash
+python mp4_to_mcap.py --input-paths /path/to/videos --output-dir /path/to/output
 ```
 
-### 3. Set Up a coScene Action with the Docker Image and Configure Trigger
+### Docker Setup
 
-To automate the conversion process, set up a coScene action using the pushed Docker image.
+1. Build the image:
+```bash
+docker compose build
+```
 
-1) Create a New Action: In your coScene project, navigate to the Actions section and create a new action.
+2. Run the converter:
+```bash
+docker compose run converter
+```
 
-2) Configure the Action:
+### Environment Variables
 
-Docker Image: Specify `cr.coscene.cn/{your_project_name}/h264-encoder:latest` as the Docker image.
+- `TOPIC`: Topic name for the video stream (default: "/video/h264")
+- `INPUT_PATHS`: Input directory or file paths (default: "/cos/files")
+- `OUTPUT_DIR`: Output directory for MCAP files (default: "/cos/outputs")
+- `START_TIME_NS`: Optional start time in nanoseconds for timestamp alignment
 
-Environment Variables: Set the following variables as needed:
-- __TOPIC__: Defaults to `/video/h264`.
-- __INPUT_PATHS__:
+## Usage Examples
 
-  The default value is where the files from the records mounted to. You can change it to the folder's subfolder.
+1. Convert a single file:
+```bash
+python mp4_to_mcap.py --input-paths video.mp4 --output-dir ./output
+```
 
-  Defaults to `/cos/files`
-- __OUTPUT_DIR__: Defaults to `/cos/outputs`.
+2. Convert all MP4s in a directory:
+```bash
+python mp4_to_mcap.py --input-paths ./videos --output-dir ./output
+```
 
-3) Set Up Trigger:
+3. Using Docker with custom paths:
+```bash
+docker compose run -e INPUT_PATHS=/data/videos -e OUTPUT_DIR=/data/output converter
+```
 
-Define the event that will trigger this action, such as uploading a new MP4 file to a specific directory.
+## Docker Configuration
 
+### Dockerfile
+- Based on ROS Noetic for compatibility
+- Installs necessary system dependencies
+- Sets up Python environment with required packages
+- Configures working directory and volumes
 
-### 4. Upload an MP4 File to a new Record and Verify the Docker Invocation
-
-1. Upload the File: Drag an MP4 file to the `records` page of the project.
-2. Check the Action Invocation:
-   
-    Monitor the Actions dashboard in coScene to ensure the conversion action is triggered.
-
-3. Verify the output in the specified output directory of the run.
+### docker-compose.yml
+- Builds and runs the converter service
+- Mounts input and output volumes
+- Configures environment variables
+- Enables interactive mode for debugging
 
 ## Notes
 
-- Ensure that the input and output directories are correctly mounted and accessible within the Docker container.
-- Adjust environment variables as necessary to fit your specific use case.
+- The converter maintains frame timing from the original MP4
+- Progress bars show conversion status and estimated time
+- Supports both file and directory inputs
+- Creates one MCAP file per input MP4
 
-For more detailed information, refer to the coScene documentation. ￼
+## Error Handling
 
-Feel free to customize this README to better fit your project’s specifics.
+The script will fail with clear error messages if:
+- Input paths are not specified
+- Output directory is not specified
+- No MP4 files are found in input paths
+- Input files are not valid MP4s
+
+## Contributing
+
+Feel free to submit issues and pull requests for improvements.
