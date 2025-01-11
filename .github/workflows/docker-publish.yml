@@ -3,21 +3,29 @@ name: Docker Build and Publish
 on:
   push:
     branches: [ "main" ]
-    tags: [ 'v*.*.*' ]
+    paths:
+      - 'mp4-to-mcap/**'  # Only trigger when files in this folder change
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'mp4-to-mcap/**'
 
 env:
   REGISTRY: cr.coscene.cn
   IMAGE_NAME: codemo/h264-encoder
+  VERSION: 1.0.0  # Fixed version, update manually when needed
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: production
+    environment: coscene.cn/codemo
     permissions:
       contents: read
       packages: write
+
+    defaults:
+      run:
+        working-directory: mp4-to-mcap  # Set working directory for all run steps
 
     steps:
       - name: Checkout repository
@@ -34,7 +42,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: robot${{ secrets.COSCENE_DOCKER_USER }}
+          username: ${{ secrets.COSCENE_DOCKER_USER }}
           password: ${{ secrets.COSCENE_DOCKER_PASS }}
 
       - name: Extract Docker metadata
@@ -43,17 +51,14 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # For git tags like v1.2.3
-            type=semver,pattern={{version}},value=v1.2.3  # produces: 1.2.3
-            type=semver,pattern={{major}}.{{minor}},value=v1.2.3  # produces: 1.2
-            # For branches
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,format=short  # git sha
+            type=raw,value=${{ env.VERSION }}
+            type=raw,value=latest
+            type=sha,format=short
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: mp4-to-mcap
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
