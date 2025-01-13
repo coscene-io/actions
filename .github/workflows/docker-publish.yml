@@ -10,6 +10,12 @@ on:
     paths:
       - 'mp4-to-mcap/**'
   workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run w/ mxschmitt/action-tmate enabled' # Check out https://github.com/marketplace/actions/debugging-with-tmate
+        required: false
+        default: false
 
 env:
   VERSION: 1.0.0  # Fixed version, update manually when needed
@@ -73,7 +79,12 @@ jobs:
       - name: Push Docker image
         if: github.event_name != 'pull_request'
         run: |
-          for tag in ${{ steps.meta.outputs.tags }}; do
-            docker push $tag
+          echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
+            docker push "$tag"
           done
+
+      # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
   
