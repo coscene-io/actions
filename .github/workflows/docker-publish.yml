@@ -9,6 +9,7 @@ on:
     branches: [ "main" ]
     paths:
       - 'mp4-to-mcap/**'
+  workflow_dispatch:
 
 env:
   VERSION: 1.0.0  # Fixed version, update manually when needed
@@ -59,17 +60,20 @@ jobs:
             type=raw,value=${{ env.VERSION }}
             type=raw,value=latest
             type=sha,format=short
-        
-      - name: Print Docker config.json
-        run: cat ~/.docker/config.json
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6.11.0
-        with:
-          context: mp4-to-mcap
-          platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Build Docker image
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            $(echo "${{ steps.meta.outputs.tags }}" | sed 's/^/-t /g') \
+            $(echo "${{ steps.meta.outputs.labels }}" | sed 's/^/--label /g') \
+            --load \
+            .
+
+      - name: Push Docker image
+        if: github.event_name != 'pull_request'
+        run: |
+          for tag in ${{ steps.meta.outputs.tags }}; do
+            docker push $tag
+          done
+  
