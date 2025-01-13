@@ -13,7 +13,7 @@ on:
     inputs:
       debug_enabled:
         type: boolean
-        description: 'Run w/ mxschmitt/action-tmate enabled' # Check out https://github.com/marketplace/actions/debugging-with-tmate
+        description: 'Enable mxschmitt/action-tmate' # Check out https://github.com/marketplace/actions/debugging-with-tmate
         required: false
         default: false
 
@@ -28,7 +28,7 @@ jobs:
         include:
           - environment: coscene.cn:codemo
             registry: cr.coscene.cn
-            image_name: codemo/h264-encoder
+            image_name: codemo/mp4-to-mcap
 
     environment: ${{ matrix.environment }}
     permissions:
@@ -66,15 +66,29 @@ jobs:
             type=raw,value=${{ env.VERSION }}
             type=raw,value=latest
             type=sha,format=short
-
+      
       - name: Build Docker image
-        run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            $(echo "${{ steps.meta.outputs.tags }}" | sed 's/^/-t /g') \
-            $(echo "${{ steps.meta.outputs.labels }}" | sed 's/^/--label /g') \
-            --load \
-            .
+        uses: docker/build-push-action@v6.11.0
+        with:
+          context: mp4-to-mcap
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      # use the ssh command in the output to connect to the tmate session and then run the following command to build the docker image:
+      #   docker buildx build \
+      #     --platform linux/amd64 \
+      #     $(echo "${{ steps.meta.outputs.tags }}" | sed 's/^/-t /g') \
+      #     $(echo "${{ steps.meta.outputs.labels }}" | sed 's/^/--label /g') \
+      #     --push .
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Push Docker image
         if: github.event_name != 'pull_request'
@@ -82,9 +96,4 @@ jobs:
           echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
             docker push "$tag"
           done
-
-      # Enable tmate debugging of manually-triggered workflows if the input option was provided
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
   
