@@ -1,7 +1,7 @@
 services:
   converter:
     build: .
-    image: cr.coscene.cn/codemo/h264-encoder:latest
+    image: cr.coscene.cn/codemo/mp4-to-mcap:latest
     volumes:
       - ./files:${INPUT_PATHS:-/cos/files}:ro
       - ./outputs:${OUTPUT_DIR:-/cos/outputs}
